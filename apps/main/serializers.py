@@ -27,6 +27,8 @@ class PostListSerializer(serializers.ModelSerializer):
     author = serializers.StringRelatedField()
     category = serializers.StringRelatedField()
     comments_count = serializers.ReadOnlyField()
+    is_pinned = serializers.ReadOnlyField()
+    pinned_info = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
@@ -43,8 +45,14 @@ class PostListSerializer(serializers.ModelSerializer):
             "updated_at",
             "views_count",
             "comments_count",
+            "is_pinned",
+            "pinned_info",
         ]
         read_only_fields = ["slug", "author", "views_count"]
+        
+    def get_pinned_info(self, obj):
+        """Back info about pinning the post"""
+        return obj.get_pinned_info()
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -52,6 +60,7 @@ class PostListSerializer(serializers.ModelSerializer):
         if len(data["content"]) > 200:
             data["content"] = data["content"][:200] + "..."
         return data
+    
 
 
 class PostDetailSerializer(serializers.ModelSerializer):
@@ -60,6 +69,9 @@ class PostDetailSerializer(serializers.ModelSerializer):
     author_info = serializers.SerializerMethodField()
     category_info = serializers.SerializerMethodField()
     comments_count = serializers.ReadOnlyField()
+    is_pinned = serializers.ReadOnlyField()
+    pinned_info = serializers.SerializerMethodField()
+    can_pin = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
@@ -78,6 +90,9 @@ class PostDetailSerializer(serializers.ModelSerializer):
             "updated_at",
             "views_count",
             "comments_count",
+            "is_pinned",
+            "pinned_info",
+            "can_pin",
         ]
         read_only_fields = ["slug", "author", "views_count"]
 
@@ -89,6 +104,15 @@ class PostDetailSerializer(serializers.ModelSerializer):
             "full_name": author.full_name,
             "avatar": author.avatar.url if author.avatar else None,
         }
+    def get_pinned_info(self, obj):
+        return obj.get_pinned_info()
+    
+    def get_can_pin(self, obj):
+        """Check if the current user can pin the post"""
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.can_be_pinned_by(request.user)
 
     def get_category_info(self, obj):
         if obj.category:
