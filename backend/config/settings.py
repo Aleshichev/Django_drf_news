@@ -240,4 +240,8 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'Документация для моего Django REST API',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'ENUM_NAME_OVERRIDES': {
+        'apps.main.models.Post.status.choices': 'PostStatusEnum',
+        'apps.subscribe.models.Subscription.status.choices': 'SubscriptionStatusEnum',
+    },
 }

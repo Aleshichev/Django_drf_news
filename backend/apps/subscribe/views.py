@@ -14,42 +14,46 @@ from ..subscribe.serializers import (
     SubscriptionHistorySerializer,
     UserSubscriptionStatusSerializer,
     PinPostSerializer,
-    UnpinPostSerializer
+    UnpinPostSerializer,
 )
 from apps.main.models import Post
-from drf_spectacular.utils import extend_schema
-
+from drf_spectacular.utils import extend_schema,  OpenApiTypes
 
 
 @extend_schema(
-    tags=['Subscription Plans'],
-    summary='Получить список доступных тарифных планов',
-    description='Возвращает список всех активных планов подписки.'
+    tags=["Subscription Plans"],
+    summary="Get list of available subscription plans",
+    description="Returns a list of all active subscription plans.",
 )
 class SubscriptionPlanListView(generics.ListAPIView):
     """List of subscription plans"""
+
     queryset = SubscriptionPlan.objects.filter(is_active=True)
     serializer_class = SubscriptionPlanSerializer
     permission_classes = [permissions.AllowAny]
 
+
 @extend_schema(
-    tags=['Subscription Plans'],
-    summary='Детали тарифного плана',
-    description='Возвращает информацию о конкретном плане подписки по ID.'
+    tags=["Subscription Plans"],
+    summary="Subscription plan details",
+    description="Returns information about a specific subscription plan by ID.",
 )
 class SubscriptionPlanDetailView(generics.RetrieveAPIView):
     """Details of a specific subscription plan"""
+
     queryset = SubscriptionPlan.objects.filter(is_active=True)
     serializer_class = SubscriptionPlanSerializer
     permission_classes = [permissions.AllowAny]
 
+
 @extend_schema(
-    tags=['User Subscription'],
-    summary='Информация о подписке пользователя',
-    description='Возвращает активную подписку текущего пользователя, если она есть.'
+    tags=["User Subscription"],
+    summary="User subscription information",
+    description="Returns the active subscription of the current user, if available.",
 )
 class UserSubscriptionView(generics.RetrieveAPIView):
     """Information about the user's subscription"""
+
     serializer_class = SubscriptionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -59,7 +63,7 @@ class UserSubscriptionView(generics.RetrieveAPIView):
             return self.request.user.subscription
         except Subscription.DoesNotExist:
             return None
-        
+
     def retrieve(self, request, *args, **kwargs):
         """Back subscription information"""
         subscription = self.get_object()
@@ -67,18 +71,19 @@ class UserSubscriptionView(generics.RetrieveAPIView):
             serializer = self.get_serializer(subscription)
             return Response(serializer.data)
         else:
-            return Response({
-                'detail': 'No subscription found'
-            }, status=status.HTTP_404_NOT_FOUND)
-        
-    
+            return Response(
+                {"detail": "No subscription found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+
 @extend_schema(
-    tags=['User Subscription'],
-    summary='История подписок пользователя',
-    description='Возвращает историю всех действий с подпиской пользователя.'
+    tags=["User Subscription"],
+    summary="User subscription history",
+    description="Returns the history of all actions related to the user’s subscriptions.",
 )
 class SubscriptionHistoryView(generics.ListAPIView):
     """History of user's subscription"""
+
     serializer_class = SubscriptionHistorySerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -89,14 +94,16 @@ class SubscriptionHistoryView(generics.ListAPIView):
             return subscription.history.all()
         except Subscription.DoesNotExist:
             return SubscriptionHistory.objects.none()
-        
+
+
 @extend_schema(
-    tags=['Pinned Posts'],
-    summary='Список закреплённых постов',
-    description='Возвращает список всех закреплённых постов от пользователей с активными подписками.'
+    tags=["Pinned Posts"],
+    summary="List of pinned posts",
+    description="Returns a list of all pinned posts from users with active subscriptions.",
 )
 class PinnedPostView(generics.RetrieveUpdateDestroyAPIView):
     """Develops pinned post of the user"""
+
     serializer_class = PinnedPostSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -106,7 +113,7 @@ class PinnedPostView(generics.RetrieveUpdateDestroyAPIView):
             return self.request.user.pinned_post
         except PinnedPost.DoesNotExist:
             return None
-        
+
     def retrieve(self, request, *args, **kwargs):
         """Back pinned post information"""
         pinned_post = self.get_object()
@@ -114,20 +121,24 @@ class PinnedPostView(generics.RetrieveUpdateDestroyAPIView):
             serializer = self.get_serializer(pinned_post)
             return Response(serializer.data)
         else:
-            return Response({
-                'detail': 'No pinned post found'
-            }, status=status.HTTP_404_NOT_FOUND)
-        
+            return Response(
+                {"detail": "No pinned post found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
     def update(self, request, *args, **kwargs):
         """Updates the pinned post"""
         # Check subscription
-        if not hasattr(request.user, 'subscription') or not request.user.subscription.is_active:
-            return Response({
-                'error': 'Active subscription required to pin posts'
-            }, status=status.HTTP_403_FORBIDDEN)
+        if (
+            not hasattr(request.user, "subscription")
+            or not request.user.subscription.is_active
+        ):
+            return Response(
+                {"error": "Active subscription required to pin posts"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         return super().update(request, *args, **kwargs)
-    
+
     def destroy(self, request, *args, **kwargs):
         """Deletes the pinned post"""
         pinned_post = self.get_object()
@@ -135,227 +146,263 @@ class PinnedPostView(generics.RetrieveUpdateDestroyAPIView):
             pinned_post.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
-            return Response({
-                'detail': 'No pinned post found'
-            }, status=status.HTTP_404_NOT_FOUND)
- 
-        
+            return Response(
+                {"detail": "No pinned post found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+
 @extend_schema(
-    tags=['User Subscription'],
-    summary='Статус подписки пользователя',
-    description='Возвращает статус подписки текущего пользователя.'
+    tags=["User Subscription"],
+    summary="User subscription status",
+    description="Returns the subscription status of the current user.",
+    responses=UserSubscriptionStatusSerializer
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
 def subscription_status(request):
     """Back subscription status of the user"""
-    serializer = UserSubscriptionStatusSerializer(request.user, context={'request': request})
+    serializer = UserSubscriptionStatusSerializer(
+        request.user, context={"request": request}
+    )
     return Response(serializer.data)
 
+
 @extend_schema(
-    tags=['Pinned Posts'],
-    summary='Закрепить пост',
-    description='Позволяет пользователю закрепить один из своих опубликованных постов.'
+    tags=["Pinned Posts"],
+    summary="Pin a post",
+    description="Allows a user to pin one of their published posts.",
 )
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
 def pin_post(request):
     """Pins a post for the user"""
-    serializer = PinPostSerializer(data=request.data, context={'request': request})
-    
+    serializer = PinPostSerializer(data=request.data, context={"request": request})
+
     if serializer.is_valid():
-        post_id = serializer.validated_data['post_id']
+        post_id = serializer.validated_data["post_id"]
 
         try:
             with transaction.atomic():
-                post = get_object_or_404(Post, id=post_id, status='published')
+                post = get_object_or_404(Post, id=post_id, status="published")
 
                 # check ownership
                 if post.author != request.user:
-                    return Response({
-                        'error': 'You can only pin your own posts'
-                    }, status=status.HTTP_403_FORBIDDEN)
-                
+                    return Response(
+                        {"error": "You can only pin your own posts"},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+
                 # check active subscription
-                if not hasattr(request.user, 'subscription') or not request.user.subscription.is_active:
-                    return Response({
-                        'error': 'Active subscription required to pin posts'
-                    }, status=status.HTTP_403_FORBIDDEN)
-                
+                if (
+                    not hasattr(request.user, "subscription")
+                    or not request.user.subscription.is_active
+                ):
+                    return Response(
+                        {"error": "Active subscription required to pin posts"},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+
                 # delete existing pinned post
-                if hasattr(request.user, 'pinned_post'):
+                if hasattr(request.user, "pinned_post"):
                     request.user.pinned_post.delete()
 
-                pinned_post = PinnedPost.objects.create(
-                    user=request.user,
-                    post=post
-                )
+                pinned_post = PinnedPost.objects.create(user=request.user, post=post)
 
                 response_serializer = PinnedPostSerializer(pinned_post)
-                return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+                return Response(
+                    response_serializer.data, status=status.HTTP_201_CREATED
+                )
         except Exception as e:
-            return Response({
-                'error': str(e),
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {
+                    "error": str(e),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 @extend_schema(
-    tags=['Pinned Posts'],
-    summary='Открепить пост',
-    description='Удаляет текущий закреплённый пост пользователя.'
+    tags=["Pinned Posts"],
+    summary="Unpin a post",
+    description="Removes the current pinned post of the user.",
+    request=UnpinPostSerializer,
+    responses=UnpinPostSerializer
 )
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
 def unpin_post(request):
     """Unpins the user's pinned post"""
-    serializer = UnpinPostSerializer(data=request.data, context={'request': request})
-    
+    serializer = UnpinPostSerializer(data=request.data, context={"request": request})
+
     if serializer.is_valid():
         try:
             pinned_post = request.user.pinned_post
             pinned_post.delete()
-            
-            return Response({
-                'message': 'Post unpinned successfully'
-            }, status=status.HTTP_200_OK)
-            
+
+            return Response(
+                {"message": "Post unpinned successfully"}, status=status.HTTP_200_OK
+            )
+
         except PinnedPost.DoesNotExist:
-            return Response({
-                'error': 'No pinned post found'
-            }, status=status.HTTP_404_NOT_FOUND)
-    
+            return Response(
+                {"error": "No pinned post found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 @extend_schema(
-    tags=['User Subscription'],
-    summary='Отменить подписку',
-    description='Позволяет пользователю отменить свою активную подписку. Удаляет закреплённый пост и сохраняет запись в истории.'
+    tags=["User Subscription"],
+    summary="Cancel subscription",
+    description="Allows the user to cancel their active subscription. Deletes the pinned post and records the action in history.",
 )
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
 def cancel_subscription(request):
     """Cancels the user's subscription"""
     try:
         subscription = request.user.subscription
-        
+
         if not subscription.is_active:
-            return Response({
-                'error': 'No active subscription found'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {"error": "No active subscription found"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         with transaction.atomic():
             # Cancel the subscription
             subscription.cancel()
-            
+
             # Delete pinned post if exists
-            if hasattr(request.user, 'pinned_post'):
+            if hasattr(request.user, "pinned_post"):
                 request.user.pinned_post.delete()
-            
+
             # Write to history
             SubscriptionHistory.objects.create(
                 subscription=subscription,
-                action='cancelled',
-                description='Subscription cancelled by user'
+                action="cancelled",
+                description="Subscription cancelled by user",
             )
-        
-        return Response({
-            'message': 'Subscription cancelled successfully'
-        }, status=status.HTTP_200_OK)
-        
+
+        return Response(
+            {"message": "Subscription cancelled successfully"},
+            status=status.HTTP_200_OK,
+        )
+
     except Subscription.DoesNotExist:
-        return Response({
-            'error': 'No subscription found'
-        }, status=status.HTTP_404_NOT_FOUND)
-  
-  
+        return Response(
+            {"error": "No subscription found"}, status=status.HTTP_404_NOT_FOUND
+        )
+
+
 @extend_schema(
-    tags=['Pinned Posts'],
-    summary='Список закреплённых постов',
-    description='Возвращает список всех закреплённых постов от пользователей с активными подписками.'
-)    
-@api_view(['GET'])
+    tags=["Pinned Posts"],
+    summary="List pinned posts",
+    description="Returns a list of all pinned posts from users with active subscriptions.",
+    responses=OpenApiTypes.OBJECT,
+)
+@api_view(["GET"])
 @permission_classes([permissions.AllowAny])
 def pinned_posts_list(request):
     """Back list of pinned posts from users with active subscriptions"""
     # Get only pinned posts from users with active subscriptions
-    pinned_posts = PinnedPost.objects.select_related(
-        'post', 'post__author', 'post__category', 'user__subscription'
-    ).filter(
-        user__subscription__status='active',
-        user__subscription__end_date__gt=timezone.now(),
-        post__status='published'
-    ).order_by('pinned_at')
+    pinned_posts = (
+        PinnedPost.objects.select_related(
+            "post", "post__author", "post__category", "user__subscription"
+        )
+        .filter(
+            user__subscription__status="active",
+            user__subscription__end_date__gt=timezone.now(),
+            post__status="published",
+        )
+        .order_by("pinned_at")
+    )
 
     # Format response data
     posts_data = []
     for pinned_post in pinned_posts:
         post = pinned_post.post
-        posts_data.append({
-            'id': post.id,
-            'title': post.title,
-            'slug': post.slug,
-            'content': post.content[:200] + '...' if len(post.content) > 200 else post.content,
-            'image': post.image.url if post.image else None,
-            'category': post.category.name if post.category else None,
-            'author': {
-                'id': post.author.id,
-                'username': post.author.username,
-                'full_name': post.author.full_name
-            },
-            'views_count': post.views_count,
-            'comments_count': post.comments_count,
-            'created_at': post.created_at,
-            'pinned_at': pinned_post.pinned_at,
-            'is_pinned': True
-        })
-    
-    return Response({
-        'count': int(posts_data),
-        'results': posts_data,
-    })
+        posts_data.append(
+            {
+                "id": post.id,
+                "title": post.title,
+                "slug": post.slug,
+                "content": (
+                    post.content[:200] + "..."
+                    if len(post.content) > 200
+                    else post.content
+                ),
+                "image": post.image.url if post.image else None,
+                "category": post.category.name if post.category else None,
+                "author": {
+                    "id": post.author.id,
+                    "username": post.author.username,
+                    "full_name": post.author.full_name,
+                },
+                "views_count": post.views_count,
+                "comments_count": post.comments_count,
+                "created_at": post.created_at,
+                "pinned_at": pinned_post.pinned_at,
+                "is_pinned": True,
+            }
+        )
+
+    return Response(
+        {
+            "count": int(posts_data),
+            "results": posts_data,
+        }
+    )
+
 
 @extend_schema(
-    tags=['Pinned Posts'],
-    summary='Проверить, можно ли закрепить пост',
-    description='Проверяет, может ли пользователь закрепить данный пост (учитывает владение и статус подписки).'
+    tags=["Pinned Posts"],
+    summary="Check if a post can be pinned",
+    description="Checks whether the user can pin the specified post (considers ownership and subscription status).",
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
 def can_pin_post(request, post_id):
     """Check if the user can pin a specific post"""
     try:
-        post = get_object_or_404(Post, id=post_id, status='published')
-        
+        post = get_object_or_404(Post, id=post_id, status="published")
+
         # Checks
         checks = {
-            'post_exists': True,
-            'is_own_post': post.author == request.user,
-            'has_subscription': hasattr(request.user, 'subscription'),
-            'subscription_active': False,
-            'can_pin': False
+            "post_exists": True,
+            "is_own_post": post.author == request.user,
+            "has_subscription": hasattr(request.user, "subscription"),
+            "subscription_active": False,
+            "can_pin": False,
         }
-        
-        if checks['has_subscription']:
-            checks['subscription_active'] = request.user.subscription.is_active
-        
-        checks['can_pin'] = (
-            checks['is_own_post'] and 
-            checks['has_subscription'] and 
-            checks['subscription_active']
+
+        if checks["has_subscription"]:
+            checks["subscription_active"] = request.user.subscription.is_active
+
+        checks["can_pin"] = (
+            checks["is_own_post"]
+            and checks["has_subscription"]
+            and checks["subscription_active"]
         )
-        
-        return Response({
-            'post_id': post_id,
-            'can_pin': checks['can_pin'],
-            'checks': checks,
-            'message': 'Can pin post' if checks['can_pin'] else 'Cannot pin post'
-        })
-        
+
+        return Response(
+            {
+                "post_id": post_id,
+                "can_pin": checks["can_pin"],
+                "checks": checks,
+                "message": "Can pin post" if checks["can_pin"] else "Cannot pin post",
+            }
+        )
+
     except Post.DoesNotExist:
-        return Response({
-            'post_id': post_id,
-            'can_pin': False,
-            'checks': {'post_exists': False},
-            'message': 'Post not found'
-        }, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {
+                "post_id": post_id,
+                "can_pin": False,
+                "checks": {"post_exists": False},
+                "message": "Post not found",
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
