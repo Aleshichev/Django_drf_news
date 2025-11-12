@@ -103,6 +103,7 @@ class ChangePasswordView(generics.UpdateAPIView):
 
     serializer_class = PasswordChangeSerializer
     permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['put'] 
 
     def get_object(self):
         return self.request.user

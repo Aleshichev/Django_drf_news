@@ -17,7 +17,7 @@ from drf_spectacular.utils import extend_schema
 
 
 @extend_schema(
-    tags=["Categories"],
+    tags=["Category"],
     summary="List and create categories",
     description="Retrieve a list of all categories or create a new category (authenticated users only). Supports search and ordering.",
 )

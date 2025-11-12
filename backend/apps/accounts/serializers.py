@@ -9,6 +9,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         write_only=True, required=True, validators=[validate_password]
     )
     password2 = serializers.CharField(write_only=True, required=True)
+    
 
     class Meta:
         model = User
@@ -32,6 +33,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         validated_data.pop("password2")
         user = User.objects.create_user(**validated_data)
         return user
+    
 
 
 class UserLoginSerializer(serializers.Serializer):
@@ -80,13 +82,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "comments_count",
         )
         read_only_fields = ("id", "created_at", "updated_at")
-        
+
     def get_posts_count(self, obj):
         try:
             return obj.posts.count()
         except AttributeError:
             return 0
-    
+
     def get_comments_count(self, obj):
         try:
             return obj.comments.count()
@@ -103,13 +105,14 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "avatar",
             "bio",
         )
-        
+
     def update(self, instance, validated_data):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
         return instance
-    
+
+
 class PasswordChangeSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True, required=True)
     new_password = serializers.CharField(
@@ -117,9 +120,8 @@ class PasswordChangeSerializer(serializers.Serializer):
     )
     new_password2 = serializers.CharField(write_only=True, required=True)
 
-
     def validate_old_password(self, value):
-        user = self.context['request'].user
+        user = self.context["request"].user
         if not user.check_password(value):
             raise serializers.ValidationError("Old password is not correct.")
         return value
@@ -130,8 +132,9 @@ class PasswordChangeSerializer(serializers.Serializer):
                 {"new_password": "New password fields didn't match."}
             )
         return attrs
+
     def save(self, **kwargs):
-        user = self.context['request'].user
-        user.set_password(self.validated_data['new_password'])
+        user = self.context["request"].user
+        user.set_password(self.validated_data["new_password"])
         user.save()
         return user

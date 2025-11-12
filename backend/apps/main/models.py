@@ -32,7 +32,7 @@ class Category(models.Model):
 class PostManager(models.Manager):
     """Post manager with additional query methods"""
 
-    def pusblished(self):
+    def published(self):
         return self.filter(status="published")
 
     def pinned_posts(self):

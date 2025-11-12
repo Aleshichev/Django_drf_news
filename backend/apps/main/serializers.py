@@ -16,9 +16,9 @@ class CategorySerializer(serializers.ModelSerializer):
     def get_posts_count(self, obj):
         return obj.posts.filter(status="published").count()
 
-    def create(self, validated_data):
-        validated_data["slug"] = slugify(validated_data["name"])
-        return super().create(validated_data)
+    # def create(self, validated_data):
+    #     validated_data["slug"] = slugify(validated_data["name"])
+    #     return super().create(validated_data)
 
 
 class PostListSerializer(serializers.ModelSerializer):
@@ -126,6 +126,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
 
 class PostCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating and updating posts"""
+    image = serializers.ImageField(required=False)
 
     class Meta:
         model = Post
@@ -133,7 +134,6 @@ class PostCreateUpdateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data["author"] = self.context["request"].user
-        validated_data["slug"] = slugify(validated_data["title"])
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
