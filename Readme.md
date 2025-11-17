@@ -53,6 +53,7 @@ Gunicorn – WSGI server for Django
 Let's Encrypt SSL – HTTPS certificates
 
 ## 📁 Project Structure
+```
 news-site/
 ├── backend/                  # Django backend
 │   ├── apps/
@@ -73,7 +74,7 @@ news-site/
 ├── docker-compose.yml
 ├── nginx.conf
 └── .env
-
+```
 ## 🎯 Core Data Models
 ### User
 
